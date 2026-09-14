@@ -12,6 +12,8 @@ import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import EditDocument from './pages/EditDocument';
+import Saved from './pages/Saved';
+import Categories from './pages/Categories';
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/saved" element={<ProtectedRoute><Saved /></ProtectedRoute>} />
         
         {/* Các trang yêu cầu đăng nhập */}
         <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />

@@ -1,165 +1,118 @@
-import { useState, useEffect } from 'react';
-import { getAllDocuments, getDownloadUrl } from '../services/documentService';
-import { getAllCategories } from '../services/categoryService';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { FaSearch, FaDownload, FaFileAlt, FaShieldAlt, FaBolt, FaRegHeart } from 'react-icons/fa';
+import api from '../services/api';
 
 const Home = () => {
-    const navigate = useNavigate();
     const [documents, setDocuments] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            const data = await getAllCategories();
-            setCategories(data);
-        };
-        fetchCategories();
+    const fetchDocs = useCallback(async () => {
+        try {
+            const res = await api.get('/documents');
+            setDocuments(res.data.documents || res.data);
+        } catch (err) {
+            console.error('Lỗi tải dữ liệu', err);
+        }
     }, []);
 
     useEffect(() => {
-        const fetchDocuments = async () => {
-            setLoading(true);
-            try {
-                const data = await getAllDocuments(page, searchTerm, selectedCategory);
-                const docsArray = data.documents ? data.documents : data;
-                if (Array.isArray(docsArray)) {
-                    setDocuments(docsArray);
-                    setTotalPages(data.totalPages || 1);
-                } else setDocuments([]);
-            } catch (error) {
-                console.error("Lỗi khi tải danh sách tài liệu:", error);
-                setDocuments([]);
-            } finally {
-                setLoading(false);
-            }
+        // FIX: Bọc hàm bất đồng bộ bên trong useEffect để tránh lỗi set-state-in-effect
+        const loadData = async () => {
+            await fetchDocs();
         };
-
-        const delayDebounceFn = setTimeout(() => { fetchDocuments(); }, 400);
-        return () => clearTimeout(delayDebounceFn);
-    }, [page, searchTerm, selectedCategory]);
+        loadData();
+    }, [fetchDocs]);
 
     const handleDownload = async (id) => {
-        const token = localStorage.getItem('token');
-        if (!token) return navigate('/login');
         try {
-            const data = await getDownloadUrl(id);
-            if (data.downloadUrl) window.open(data.downloadUrl, '_blank');
-        } catch (error) {
-            console.error("Lỗi khi tải xuống:", error);
-            alert('Không thể tải xuống tài liệu lúc này.');
+            const res = await api.get(`/documents/${id}/download`);
+            if (res.data.downloadUrl) {
+                window.open(res.data.downloadUrl, '_blank');
+                fetchDocs();
+            }
+        } catch (err) {
+            console.error('Lỗi tải file:', err);
+            alert('Vui lòng đăng nhập để tải tài liệu!');
+        }
+    };
+
+    const handleSave = async (id) => {
+        try {
+            await api.post(`/documents/${id}/save`);
+            alert('Đã cập nhật danh sách lưu!');
+        } catch (err) {
+            console.error('Lỗi lưu file:', err);
+            alert('Vui lòng đăng nhập để lưu tài liệu!');
         }
     };
 
     return (
-        <div style={{ minHeight: '100vh', paddingBottom: '100px' }}>
-            {/* Hero Section Siêu Đẹp */}
-            <div className="fade-in-up" style={{ 
-                padding: '120px 20px 80px 20px', 
-                textAlign: 'center',
-                background: 'radial-gradient(circle at 50% 0%, #ffffff 0%, var(--bg-color) 70%)'
-            }}>
-                <h1 className="text-gradient" style={{ fontSize: '64px', fontWeight: '800', letterSpacing: '-0.02em', marginBottom: '20px', lineHeight: '1.1' }}>
-                    Kho tàng tri thức.<br />Nằm trọn trong tay bạn.
+        <div style={{ paddingBottom: '60px' }}>
+            <div style={{ textAlign: 'center', padding: '80px 24px', background: '#FFFFFF', borderBottom: '1px solid var(--border)' }}>
+                <h1 style={{ fontSize: '56px', fontWeight: '700', letterSpacing: '-2px', color: 'var(--text-main)', marginBottom: '16px' }}>
+                    Kiến thức của bạn.<br />Được sắp xếp hoàn hảo.
                 </h1>
-                <p style={{ fontSize: '21px', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 50px auto', fontWeight: '400' }}>
-                    Tìm kiếm, chia sẻ và tải xuống hàng ngàn tài liệu học thuật, đồ án và nghiên cứu chất lượng cao.
+                <p style={{ color: 'var(--text-muted)', fontSize: '20px', maxWidth: '600px', margin: '0 auto 40px', fontWeight: '400' }}>
+                    Tìm kiếm, lưu trữ và chia sẻ tài liệu học thuật với trải nghiệm mượt mà nhất. Dành riêng cho cộng đồng.
                 </p>
                 
-                {/* Thanh tìm kiếm nổi (Floating Search Bar) */}
-                <div style={{ 
-                    display: 'flex', gap: '0', maxWidth: '720px', margin: '0 auto', 
-                    background: 'var(--surface)', borderRadius: '980px', 
-                    boxShadow: 'var(--shadow-lg)', padding: '8px',
-                    border: '1px solid rgba(0,0,0,0.05)'
-                }}>
-                    <div style={{ padding: '0 20px', display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>
-                        <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <div style={{ position: 'relative', maxWidth: '580px', margin: '0 auto', display: 'flex', boxShadow: 'var(--shadow-md)', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div style={{ padding: '0 20px', background: '#FFF', display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRight: 'none', borderTopLeftRadius: '999px', borderBottomLeftRadius: '999px' }}>
+                        <FaSearch color="var(--text-muted)" size={18} />
                     </div>
                     <input 
-                        type="text" 
-                        placeholder="Bạn đang tìm kiếm tài liệu gì?" 
-                        value={searchTerm}
-                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                        style={{ flex: 1, border: 'none', outline: 'none', fontSize: '18px', background: 'transparent' }}
+                        type="text" placeholder="Nhập tên tài liệu, môn học..."
+                        value={search} onChange={(e) => setSearch(e.target.value)}
+                        style={{ flex: 1, padding: '18px 16px', border: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none', fontSize: '16px', outline: 'none' }}
                     />
-                    <select 
-                        value={selectedCategory} 
-                        onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
-                        style={{ 
-                            border: 'none', outline: 'none', fontSize: '16px', background: 'var(--bg-color)', 
-                            padding: '12px 20px', borderRadius: '980px', cursor: 'pointer', fontWeight: '500' 
-                        }}
-                    >
-                        <option value="">Mọi danh mục</option>
-                        {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                    </select>
+                    <button className="btn-apple btn-primary" style={{ borderRadius: '0 999px 999px 0', padding: '0 32px', fontSize: '16px' }}>Tìm kiếm</button>
                 </div>
             </div>
 
-            {/* Danh sách Tài liệu */}
-            <div className="fade-in-up" style={{ animationDelay: '0.2s', maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-muted)', fontSize: '20px' }}>Đang tìm kiếm...</div>
-                ) : documents.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '100px 0' }}>
-                        <h2 style={{ fontSize: '28px', marginBottom: '10px' }}>Không tìm thấy kết quả</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '18px' }}>Thử thay đổi từ khóa hoặc danh mục tìm kiếm.</p>
-                    </div>
-                ) : (
-                    <>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
-                            {documents.map(doc => (
-                                <div key={doc.id} className="card-modern" style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <span style={{ 
-                                            display: 'inline-block', padding: '6px 12px', background: 'rgba(0, 113, 227, 0.1)', 
-                                            color: 'var(--accent)', borderRadius: '8px', fontSize: '12px', fontWeight: '700', marginBottom: '16px' 
-                                        }}>
-                                            {categories.find(c => c.id === doc.category_id)?.name || 'Tài liệu'}
-                                        </span>
-                                        <h3 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px', lineHeight: '1.3', letterSpacing: '-0.01em' }}>
-                                            {doc.title}
-                                        </h3>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '15px', lineHeight: '1.6', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                            {doc.description || 'Chưa có mô tả chi tiết cho tài liệu này.'}
-                                        </p>
-                                    </div>
-                                    <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
-                                        <button onClick={() => handleDownload(doc.id)} className="btn-modern btn-secondary" style={{ width: '100%' }}>
-                                            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{marginRight: '8px'}}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                            Tải xuống ngay
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+            <div style={{ maxWidth: '1000px', margin: '60px auto', padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <FaBolt size={32} color="var(--accent)" style={{ marginBottom: '16px' }} />
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Tốc độ chớp nhoáng</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Hệ thống tối ưu hóa giúp tải tài liệu và tìm kiếm cực nhanh.</p>
+                </div>
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <FaShieldAlt size={32} color="var(--accent)" style={{ marginBottom: '16px' }} />
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Kiểm duyệt chặt chẽ</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>100% tài liệu được kiểm duyệt nội dung trước khi xuất bản.</p>
+                </div>
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                    <FaFileAlt size={32} color="var(--accent)" style={{ marginBottom: '16px' }} />
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>Đa định dạng</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Hỗ trợ PDF, Word, Excel và PowerPoint.</p>
+                </div>
+            </div>
 
-                        {/* Phân trang */}
-                        {totalPages > 1 && (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginTop: '60px' }}>
-                                <button onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={page === 1} className="btn-modern btn-secondary">
-                                    Trang trước
-                                </button>
-                                <span style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-muted)' }}>
-                                    {page} / {totalPages}
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+                <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px', color: 'var(--text-main)' }}>Học liệu nổi bật</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+                    {documents.filter(d => d.title.toLowerCase().includes(search.toLowerCase())).map(doc => (
+                        <div key={doc.id} className="apple-card" style={{ display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <span style={{ background: '#F5F5F7', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                                    {doc.file_format || 'PDF'}
                                 </span>
-                                <button onClick={() => setPage(p => Math.min(p + 1, totalPages))} disabled={page === totalPages} className="btn-modern btn-secondary">
-                                    Trang sau
+                                <button onClick={() => handleSave(doc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FF3B30' }}>
+                                    <FaRegHeart size={18} />
                                 </button>
                             </div>
-                        )}
-                    </>
-                )}
+                            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '6px', lineHeight: '1.4' }}>{doc.title}</h3>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '24px', flex: 1 }}>Bởi: {doc.uploader_name || 'Người dùng ẩn danh'}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: '500' }}>{doc.downloads || 0} lượt tải</span>
+                                <button onClick={() => handleDownload(doc.id)} className="btn-apple btn-secondary" style={{ padding: '6px 14px', fontSize: '13px' }}>
+                                    <FaDownload size={12} /> Tải xuống
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
 };
-
 export default Home;

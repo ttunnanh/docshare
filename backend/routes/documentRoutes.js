@@ -9,6 +9,7 @@ router.get('/', documentController.getAllDocuments);
 router.get('/admin/all', verifyToken, verifyRole(['admin']), documentController.getAllForAdmin);
 router.post('/upload', verifyToken, upload.single('file'), documentController.uploadDocument);
 router.get('/pending', verifyToken, verifyRole(['admin']), documentController.getPendingDocuments);
+router.get('/saved/user', verifyToken, documentController.getSavedDocuments);
 
 // Các route động (chứa /:id) phải đặt xuống dưới
 router.get('/:id', verifyToken, documentController.getDocumentById);
@@ -16,5 +17,7 @@ router.get('/:id/download', verifyToken, documentController.downloadDocument);
 router.put('/:id', verifyToken, documentController.updateDocument);
 router.delete('/:id', verifyToken, documentController.deleteDocument);
 router.put('/:id/approve', verifyToken, verifyRole(['admin']), documentController.approveDocument);
+router.post('/:id/save', verifyToken, documentController.toggleSaveDocument);
+router.post('/:id/download', documentController.incrementDownload);
 
 module.exports = router;

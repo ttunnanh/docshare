@@ -21,13 +21,11 @@ exports.getAllDocuments = async (req, res) => {
             queryParams.push(category_id);
         }
 
-        // Đếm tổng số lượng để tính số trang
         const countQuery = query.replace('*', 'COUNT(*) as total');
         const [countResult] = await db.execute(countQuery, queryParams);
         const totalItems = countResult[0].total;
         const totalPages = Math.ceil(totalItems / limit);
 
-        // Truy vấn dữ liệu theo giới hạn
         query += ` ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
         const [documents] = await db.execute(query, queryParams);
 
@@ -51,7 +49,8 @@ exports.uploadDocument = async (req, res) => {
             return res.status(400).json({ message: 'Vui lòng chọn file tải lên' });
         }
 
-        // Đẩy file lên Cloudinary thông qua Buffer Stream
+        const fileFormat = file.originalname.split('.').pop().toUpperCase();
+
         const uploadStream = cloudinary.uploader.upload_stream(
             { resource_type: 'raw' },
             async (error, result) => {
@@ -60,10 +59,9 @@ exports.uploadDocument = async (req, res) => {
                 const fileUrl = result.secure_url;
                 const uploaderId = req.user.id;
 
-                // Lưu thông tin vào CSDL, trạng thái mặc định là 'pending'
                 await db.execute(
-                    'INSERT INTO documents (title, description, file_url, category_id, uploader_id, status) VALUES (?, ?, ?, ?, ?, ?)',
-                    [title, description, fileUrl, category_id, uploaderId, 'pending']
+                    'INSERT INTO documents (title, description, file_url, category_id, uploader_id, status, file_format) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [title, description, fileUrl, category_id, uploaderId, 'pending', fileFormat]
                 );
 
                 res.status(201).json({ 
@@ -124,7 +122,6 @@ exports.downloadDocument = async (req, res) => {
 
         const document = docs[0];
 
-        // Ghi nhận lịch sử tải xuống
         await db.query('INSERT INTO downloads (user_id, document_id) VALUES (?, ?)', [userId, id]);
         
         const fileName = document.file_path || document.file_url || document.filename || document.file;
@@ -140,7 +137,6 @@ exports.downloadDocument = async (req, res) => {
         }
 
         res.json({ downloadUrl: fileUrl });
-
     } catch (error) {
         console.error('Lỗi khi tải xuống:', error);
         res.status(500).json({ message: 'Lỗi server' });
@@ -200,7 +196,6 @@ exports.deleteDocument = async (req, res) => {
     const userId = req.user.id;
 
     try {
-        // Lấy thêm file_url để xử lý xóa trên Cloudinary
         const [docs] = await db.execute('SELECT uploader_id, file_url FROM documents WHERE id = ?', [documentId]);
         if (docs.length === 0) return res.status(404).json({ message: 'Tài liệu không tồn tại' });
         
@@ -210,13 +205,11 @@ exports.deleteDocument = async (req, res) => {
             return res.status(403).json({ message: 'Không có quyền xóa tài liệu này' });
         }
 
-        // Trích xuất public_id từ URL Cloudinary và gọi API xóa
         if (document.file_url && document.file_url.includes('cloudinary.com')) {
             const urlParts = document.file_url.split('/');
             const filenameWithExt = urlParts[urlParts.length - 1];
             const publicId = filenameWithExt.substring(0, filenameWithExt.lastIndexOf('.'));
             
-            // Sử dụng resource_type: 'raw' vì lúc upload đã set 'raw' cho tài liệu
             await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
         }
 
@@ -226,6 +219,50 @@ exports.deleteDocument = async (req, res) => {
         res.json({ message: 'Xóa tài liệu thành công' });
     } catch (error) {
         console.error('Lỗi xóa tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+
+exports.toggleSaveDocument = async (req, res) => {
+    const userId = req.user.id;
+    const documentId = req.params.id;
+    try {
+        const [existing] = await db.query('SELECT * FROM saved_documents WHERE user_id = ? AND document_id = ?', [userId, documentId]);
+        if (existing.length > 0) {
+            await db.query('DELETE FROM saved_documents WHERE user_id = ? AND document_id = ?', [userId, documentId]);
+            return res.json({ message: 'Đã bỏ lưu tài liệu', saved: false });
+        } else {
+            await db.query('INSERT INTO saved_documents (user_id, document_id) VALUES (?, ?)', [userId, documentId]);
+            return res.json({ message: 'Đã lưu tài liệu', saved: true });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+
+exports.getSavedDocuments = async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const query = `
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            JOIN saved_documents sd ON d.id = sd.document_id 
+            JOIN users u ON d.uploader_id = u.id 
+            WHERE sd.user_id = ?
+        `;
+        const [documents] = await db.query(query, [userId]);
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+
+exports.incrementDownload = async (req, res) => {
+    const documentId = req.params.id;
+    try {
+        await db.query('UPDATE documents SET downloads = downloads + 1 WHERE id = ?', [documentId]);
+        res.json({ message: 'Đã tăng lượt tải' });
+    } catch (error) {
         res.status(500).json({ message: 'Lỗi server', error });
     }
 };
