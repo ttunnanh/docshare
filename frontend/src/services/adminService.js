@@ -11,12 +11,12 @@ export const getPendingDocuments = async () => {
 };
 
 export const approveDocument = async (id) => {
-    const response = await api.put(`/admin/documents/${id}/approve`);
+    const response = await api.put(`/admin/documents/${id}/status`, { status: 'approved' });
     return response.data;
 };
 
 export const rejectDocument = async (id) => {
-    const response = await api.put(`/admin/documents/${id}/reject`);
+    const response = await api.put(`/admin/documents/${id}/status`, { status: 'rejected' });
     return response.data;
 };
 
@@ -26,11 +26,10 @@ export const getAllUsers = async () => {
 };
 
 export const deleteUser = async (id) => {
-    const response = await api.delete(`/admin/users/${id}`);
+    const response = await api.delete(`/users/${id}`);
     return response.data;
 };
 
-// Bổ sung hàm cập nhật quyền người dùng đang bị thiếu
 export const updateUserRole = async (id, role) => {
     const response = await api.put(`/admin/users/${id}/role`, { role });
     return response.data;

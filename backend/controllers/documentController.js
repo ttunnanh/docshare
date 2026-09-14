@@ -9,25 +9,34 @@ exports.getAllDocuments = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        let query = 'SELECT * FROM documents WHERE status = "approved"';
+        let baseCondition = 'WHERE d.status = "approved"';
         let queryParams = [];
 
         if (keyword) {
-            query += ' AND title LIKE ?';
+            baseCondition += ' AND d.title LIKE ?';
             queryParams.push(`%${keyword}%`);
         }
         if (category_id) {
-            query += ' AND category_id = ?';
+            baseCondition += ' AND d.category_id = ?';
             queryParams.push(category_id);
         }
 
-        const countQuery = query.replace('*', 'COUNT(*) as total');
+        // Đếm tổng số lượng
+        const countQuery = `SELECT COUNT(*) as total FROM documents d ${baseCondition}`;
         const [countResult] = await db.execute(countQuery, queryParams);
         const totalItems = countResult[0].total;
         const totalPages = Math.ceil(totalItems / limit);
 
-        query += ` ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`;
-        const [documents] = await db.execute(query, queryParams);
+        // Truy vấn dữ liệu có JOIN với bảng users để lấy uploader_name
+        const dataQuery = `
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            LEFT JOIN users u ON d.uploader_id = u.id 
+            ${baseCondition} 
+            ORDER BY d.id DESC 
+            LIMIT ${limit} OFFSET ${offset}
+        `;
+        const [documents] = await db.execute(dataQuery, queryParams);
 
         res.json({
             totalItems,
@@ -36,6 +45,7 @@ exports.getAllDocuments = async (req, res) => {
             documents
         });
     } catch (error) {
+        console.error('Lỗi lấy tài liệu:', error);
         res.status(500).json({ message: 'Lỗi server', error });
     }
 };
@@ -79,7 +89,12 @@ exports.uploadDocument = async (req, res) => {
 
 exports.getPendingDocuments = async (req, res) => {
     try {
-        const [documents] = await db.execute('SELECT * FROM documents WHERE status = "pending"');
+        const [documents] = await db.execute(`
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            LEFT JOIN users u ON d.uploader_id = u.id 
+            WHERE d.status = "pending"
+        `);
         res.json(documents);
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server', error });
@@ -122,7 +137,11 @@ exports.downloadDocument = async (req, res) => {
 
         const document = docs[0];
 
-        await db.query('INSERT INTO downloads (user_id, document_id) VALUES (?, ?)', [userId, id]);
+        // Tăng lượt tải xuống (downloads) trực tiếp
+        await db.query('UPDATE documents SET downloads = downloads + 1 WHERE id = ?', [id]);
+        
+        // Bỏ qua insert vào bảng downloads nếu không dùng đến để tránh lỗi thiếu bảng
+        // await db.query('INSERT INTO downloads (user_id, document_id) VALUES (?, ?)', [userId, id]); 
         
         const fileName = document.file_path || document.file_url || document.filename || document.file;
         if (!fileName) {
@@ -146,10 +165,12 @@ exports.downloadDocument = async (req, res) => {
 exports.getDocumentById = async (req, res) => {
     try {
         const documentId = req.params.id;
-        const [documents] = await db.execute(
-            'SELECT * FROM documents WHERE id = ? AND status = "approved"', 
-            [documentId]
-        );
+        const [documents] = await db.execute(`
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            LEFT JOIN users u ON d.uploader_id = u.id 
+            WHERE d.id = ? AND d.status = "approved"
+        `, [documentId]);
         
         if (documents.length === 0) {
             return res.status(404).json({ message: 'Tài liệu không tồn tại hoặc chưa được duyệt' });
@@ -184,7 +205,12 @@ exports.updateDocument = async (req, res) => {
 
 exports.getAllForAdmin = async (req, res) => {
     try {
-        const [docs] = await db.query('SELECT * FROM documents ORDER BY created_at DESC');
+        const [docs] = await db.query(`
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            LEFT JOIN users u ON d.uploader_id = u.id 
+            ORDER BY d.created_at DESC
+        `);
         res.json(docs);
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server' });
@@ -213,7 +239,9 @@ exports.deleteDocument = async (req, res) => {
             await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
         }
 
-        await db.execute('DELETE FROM downloads WHERE document_id = ?', [documentId]);
+        // Bỏ qua delete từ bảng downloads để tránh lỗi
+        // await db.execute('DELETE FROM downloads WHERE document_id = ?', [documentId]);
+        await db.execute('DELETE FROM saved_documents WHERE document_id = ?', [documentId]);
         await db.execute('DELETE FROM documents WHERE id = ?', [documentId]);
 
         res.json({ message: 'Xóa tài liệu thành công' });

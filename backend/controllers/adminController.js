@@ -2,25 +2,26 @@ const db = require('../config/db');
 
 exports.getDashboardStats = async (req, res) => {
     try {
-        const [users] = await db.execute('SELECT COUNT(*) as totalUsers FROM users');
-        const [docs] = await db.execute('SELECT COUNT(*) as totalDocs FROM documents');
-        const [pendingDocs] = await db.execute('SELECT COUNT(*) as pendingDocs FROM documents WHERE status = "pending"');
-        const [downloads] = await db.execute('SELECT COUNT(*) as totalDownloads FROM download_history');
+        const [[{ totalUsers }]] = await db.query('SELECT COUNT(*) as totalUsers FROM users');
+        const [[{ totalDocs }]] = await db.query('SELECT COUNT(*) as totalDocs FROM documents');
+        const [[{ pendingDocs }]] = await db.query('SELECT COUNT(*) as pendingDocs FROM documents WHERE status = "pending"');
+        const [[{ totalDownloads }]] = await db.query('SELECT SUM(downloads) as totalDownloads FROM documents');
 
         res.json({
-            totalUsers: users[0].totalUsers,
-            totalDocuments: docs[0].totalDocs,
-            pendingDocuments: pendingDocs[0].pendingDocs,
-            totalDownloads: downloads[0].totalDownloads
+            totalUsers: totalUsers || 0,
+            totalDocuments: totalDocs || 0,
+            pendingDocuments: pendingDocs || 0,
+            totalDownloads: totalDownloads || 0
         });
     } catch (error) {
+        console.error('Lỗi lấy thống kê:', error);
         res.status(500).json({ message: 'Lỗi server', error });
     }
 };
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const [users] = await db.query('SELECT id, fullname, email, role FROM users');
+        const [users] = await db.query('SELECT id, fullname, email, role, created_at FROM users');
         res.json(users);
     } catch (error) {
         console.error('Lỗi lấy danh sách user:', error);
@@ -42,7 +43,12 @@ exports.updateUserRole = async (req, res) => {
 
 exports.getPendingDocuments = async (req, res) => {
     try {
-        const [docs] = await db.query('SELECT * FROM documents WHERE status = "pending"');
+        const [docs] = await db.query(`
+            SELECT d.*, u.fullname as uploader_name 
+            FROM documents d 
+            LEFT JOIN users u ON d.uploader_id = u.id 
+            WHERE d.status = "pending"
+        `);
         res.json(docs);
     } catch (error) {
         console.error('Lỗi lấy tài liệu chờ duyệt:', error);
@@ -53,7 +59,7 @@ exports.getPendingDocuments = async (req, res) => {
 exports.updateDocumentStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; // Giá trị 'approved' hoặc 'rejected'
+        const { status } = req.body;
         await db.query('UPDATE documents SET status = ? WHERE id = ?', [status, id]);
         res.json({ message: 'Cập nhật trạng thái thành công' });
     } catch (error) {

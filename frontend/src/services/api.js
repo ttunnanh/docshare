@@ -1,11 +1,9 @@
 import axios from 'axios';
 
-// Khởi tạo cấu hình mặc định cho Axios
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Đường dẫn tới Backend của bạn
+    baseURL: 'http://localhost:5000/api',
 });
 
-// Interceptor: Tự động đính kèm Token vào mỗi Request gửi đi
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -15,6 +13,18 @@ api.interceptors.request.use(
         return config;
     },
     (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
 );
 
 export default api;

@@ -6,7 +6,8 @@ export const getProfile = async () => {
 };
 
 export const getMyUploads = async () => {
-    const response = await api.get('/users/my-uploads');
+    // Sửa lại endpoint để khớp với router.get('/uploads') ở backend
+    const response = await api.get('/users/uploads');
     return response.data;
 };
 
@@ -14,6 +15,7 @@ export const getMyDownloads = async () => {
     const response = await api.get('/users/downloads');
     return response.data;
 };
+
 export const updateProfile = async (fullname) => {
     const response = await api.put('/users/profile', { fullname });
     return response.data;

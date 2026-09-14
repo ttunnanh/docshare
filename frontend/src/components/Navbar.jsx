@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaChevronDown, FaUser, FaSignOutAlt, FaCog } from 'react-icons/fa';
 
 const NavItem = ({ to, children }) => {
@@ -15,25 +15,44 @@ const NavItem = ({ to, children }) => {
     );
 };
 
-const Navbar = () => {
-    const navigate = useNavigate();
-    const [showAdmin, setShowAdmin] = useState(false);
-    const [showUser, setShowUser] = useState(false);
-    
+// Hàm lấy dữ liệu auth (Tách ra ngoài component)
+const getAuthData = () => {
     let user = null;
     try {
         const userData = localStorage.getItem('user');
         if (userData) user = JSON.parse(userData);
     } catch (err) {
-        // FIX: Đã thêm xử lý log để không bị lỗi "empty block" và "unused vars"
         console.error('Lỗi khi đọc dữ liệu user:', err);
     }
-
     const token = localStorage.getItem('token');
+    return { user, token };
+};
+
+const Navbar = () => {
+    const navigate = useNavigate();
+    const [showAdmin, setShowAdmin] = useState(false);
+    const [showUser, setShowUser] = useState(false);
+    
+    // 1. Dùng Lazy Initialization: Khởi tạo state ngay từ đầu để tránh việc gọi setState trong useEffect
+    const [auth, setAuth] = useState(getAuthData);
+
+    // 2. useEffect giờ đây CHỈ làm đúng nhiệm vụ đăng ký lắng nghe event
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setAuth(getAuthData());
+        };
+        
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
+    const { user, token } = auth;
     const isAdmin = user?.role?.toLowerCase() === 'admin';
 
     const handleLogout = () => {
         localStorage.clear();
+        setAuth({ user: null, token: null }); // Cập nhật lại UI ngay lập tức
+        setShowUser(false);
         navigate('/login');
     };
 
@@ -72,7 +91,7 @@ const Navbar = () => {
                     {token ? (
                         <div style={{ position: 'relative' }} onMouseEnter={() => setShowUser(true)} onMouseLeave={() => setShowUser(false)}>
                             <div className="btn-apple btn-secondary" style={{ padding: '6px 14px' }}>
-                                <FaUser size={12} /> {user.fullname?.split(' ').pop() || 'User'}
+                                <FaUser size={12} /> {user?.fullname?.split(' ').pop() || 'User'}
                             </div>
                             {showUser && (
                                 <div style={{ position: 'absolute', top: '100%', right: '0', paddingTop: '8px', zIndex: 1001 }}>

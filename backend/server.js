@@ -3,8 +3,13 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const db = require('./config/db');
 const path = require('path');
+
+// Nạp biến môi trường
+dotenv.config();
+
+// Khởi tạo DB connection 
+require('./config/db');
 
 // Nhúng các route
 const authRoutes = require('./routes/authRoutes');
@@ -13,27 +18,35 @@ const documentRoutes = require('./routes/documentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-dotenv.config();
-
 const app = express();
 
-// Cấu hình Middleware
-app.use(helmet()); // Bảo mật HTTP headers
-app.use(morgan('dev')); // Ghi nhật ký request
-app.use(cors());
-app.use(express.json());
+// ==========================================
+// CẤU HÌNH MIDDLEWARE
+// ==========================================
+app.use(helmet()); 
+app.use(morgan('dev')); 
+app.use(cors()); 
+app.use(express.json()); 
 
-// Kích hoạt các endpoints API
+// ==========================================
+// KÍCH HOẠT CÁC ENDPOINT API
+// ==========================================
+
+// Phục vụ các file tĩnh 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Đăng ký các router
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/categories', require('./routes/categoryRoutes'));
 
+// ==========================================
+// ROUTE MẶC ĐỊNH & KHỞI CHẠY SERVER
+// ==========================================
 app.get('/', (req, res) => {
-    res.send('API Backend Hệ thống Học liệu số đang hoạt động');
+    res.send('API Backend Hệ thống DocShare đang hoạt động');
 });
 
 const PORT = process.env.PORT || 5000;

@@ -1,11 +1,30 @@
-import api from './api';
+import axios from 'axios';
 
-export const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    return response.data;
-};
+const api = axios.create({
+    baseURL: 'http://localhost:5000/api',
+});
 
-export const register = async (fullname, email, password) => {
-    const response = await api.post('/auth/register', { fullname, email, password });
-    return response.data;
-};
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+export default api;

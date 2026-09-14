@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { getMyDownloads, getMyUploads, updateProfile, changePassword } from '../services/userService';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { deleteDocument } from '../services/documentService';
 
 const Profile = () => {
-    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const navigate = useNavigate();
+    const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user')) || {});
 
     const [downloads, setDownloads] = useState([]);
     const [uploads, setUploads] = useState([]);
@@ -35,9 +36,13 @@ const Profile = () => {
         try {
             const data = await updateProfile(fullname);
             alert('Cập nhật thành công!');
+            
             const updatedUser = { ...user, fullname: data.fullname || fullname };
             localStorage.setItem('user', JSON.stringify(updatedUser));
-            window.location.reload();
+            setUser(updatedUser);
+            
+            // Kích hoạt sự kiện storage thủ công để Navbar cập nhật ngay lập tức mà không cần F5
+            window.dispatchEvent(new Event('storage')); 
         } catch (error) {
             alert(error.response?.data?.message || 'Lỗi cập nhật');
         }
@@ -50,7 +55,8 @@ const Profile = () => {
             alert('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.dispatchEvent(new Event('storage'));
+            navigate('/login');
         } catch (error) {
             alert(error.response?.data?.message || 'Lỗi đổi mật khẩu');
         }

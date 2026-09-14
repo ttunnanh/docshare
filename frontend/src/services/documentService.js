@@ -46,11 +46,28 @@ export const getDownloadUrl = async (id) => {
     const response = await api.get(`/documents/${id}/download`);
     return response.data;
 };
+
 export const getAllForAdmin = async () => {
     const response = await api.get('/documents/admin/all');
     return response.data;
 };
+
 export const getDocumentById = async (id) => {
     const response = await api.get(`/documents/${id}`);
+    return response.data;
+};
+
+export const toggleSaveDocument = async (id) => {
+    const response = await api.post(`/documents/${id}/save`);
+    return response.data;
+};
+
+export const getSavedDocuments = async () => {
+    const response = await api.get('/documents/saved/user');
+    return response.data;
+};
+
+export const incrementDownload = async (id) => {
+    const response = await api.post(`/documents/${id}/download`);
     return response.data;
 };
