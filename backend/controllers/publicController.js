@@ -27,7 +27,12 @@ exports.getStats = async (_req, res) => {
 exports.getDocumentById = async (req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT d.*, u.fullname AS uploader_name, c.name AS category_name
+      `SELECT
+         d.id, d.title, d.description, d.file_type, d.file_format,
+         d.category_id, d.uploader_id, d.status, d.created_at,
+         d.downloads, d.rating,
+         u.fullname AS uploader_name,
+         c.name AS category_name
        FROM documents d
        LEFT JOIN users u ON u.id = d.uploader_id
        LEFT JOIN categories c ON c.id = d.category_id
