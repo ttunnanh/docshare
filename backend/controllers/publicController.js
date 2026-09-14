@@ -23,3 +23,33 @@ exports.getStats = async (_req, res) => {
     res.status(500).json({ message: 'Không thể tải thống kê công khai.' });
   }
 };
+
+exports.getDocumentById = async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      `SELECT d.*, u.fullname AS uploader_name, c.name AS category_name
+       FROM documents d
+       LEFT JOIN users u ON u.id = d.uploader_id
+       LEFT JOIN categories c ON c.id = d.category_id
+       WHERE d.id = ?
+       LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+
+    const document = rows[0];
+    const canViewPrivate = Boolean(req.user) && (
+      req.user.role === 'admin' || Number(document.uploader_id) === Number(req.user.id)
+    );
+
+    if (document.status !== 'approved' && !canViewPrivate) {
+      return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+    }
+
+    res.json(document);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Không thể tải chi tiết tài liệu.' });
+  }
+};
