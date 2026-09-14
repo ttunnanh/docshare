@@ -13,7 +13,7 @@ r.get('/pending', verifyToken, verifyRole(['admin']), c.getPendingDocuments);
 r.post('/:id/save', verifyToken, c.toggleSaveDocument);
 r.get('/:id/download', verifyToken, c.downloadDocument);
 r.put('/:id/approve', verifyToken, verifyRole(['admin']), c.approveDocument);
-r.get('/:id', optionalToken, c.getDocumentById);
+r.get('/:id', optionalToken, publicController.getDocumentById);
 r.put('/:id', verifyToken, c.updateDocument);
 r.delete('/:id', verifyToken, c.deleteDocument);
 
