@@ -1,0 +1,1 @@
+const r=require('express').Router(),c=require('../controllers/userController'),{verifyToken}=require('../middlewares/authMiddleware'); r.use(verifyToken); r.get('/profile',c.getProfile); r.put('/profile',c.updateProfile); r.put('/password',c.changePassword); r.get('/uploads',c.getMyUploads); r.get('/downloads',c.getMyDownloads); module.exports=r;

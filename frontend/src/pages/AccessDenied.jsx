@@ -1,0 +1,1 @@
+import { Link } from 'react-router-dom'; export default function AccessDenied(){return <main className="center-page"><div className="status-code">403</div><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho quản trị viên.</p><Link className="btn primary" to="/">Về trang chủ</Link></main>}
