@@ -22,7 +22,8 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
       window.dispatchEvent(new Event('auth-changed'));
 
-      const requestedPath = location.state?.from;
+      const fromQuery = new URLSearchParams(location.search).get('from');
+      const requestedPath = location.state?.from || fromQuery;
       navigate(requestedPath || (response.data.user.role === 'admin' ? '/admin/dashboard' : '/'), { replace: true });
     } catch (requestError) {
       setError(requestError.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
