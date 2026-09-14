@@ -1,5 +1,54 @@
-import { BrowserRouter,Routes,Route } from 'react-router-dom';
-import Navbar from './components/Navbar'; import ProtectedRoute from './components/ProtectedRoute';
-import Home from './pages/Home'; import Login from './pages/Login'; import Register from './pages/Register'; import Upload from './pages/Upload'; import Saved from './pages/Saved'; import Profile from './pages/Profile'; import Categories from './pages/Categories'; import DocumentDetail from './pages/DocumentDetail'; import EditDocument from './pages/EditDocument'; import AdminDashboard from './pages/AdminDashboard'; import AdminApproval from './pages/AdminApproval'; import AdminUsers from './pages/AdminUsers'; import AdminCategories from './pages/AdminCategories'; import AdminDocuments from './pages/AdminDocuments'; import AccessDenied from './pages/AccessDenied'; import NotFound from './pages/NotFound';
-const P=({children})=><ProtectedRoute>{children}</ProtectedRoute>, A=({children})=><ProtectedRoute admin>{children}</ProtectedRoute>;
-export default function App(){return <BrowserRouter><Navbar/><Routes><Route path="/" element={<Home/>}/><Route path="/login" element={<Login/>}/><Route path="/register" element={<Register/>}/><Route path="/categories" element={<Categories/>}/><Route path="/documents/:id" element={<P><DocumentDetail/></P>}/><Route path="/saved" element={<P><Saved/></P>}/><Route path="/upload" element={<P><Upload/></P>}/><Route path="/profile" element={<P><Profile/></P>}/><Route path="/document/edit/:id" element={<P><EditDocument/></P>}/><Route path="/admin/dashboard" element={<A><AdminDashboard/></A>}/><Route path="/admin/approval" element={<A><AdminApproval/></A>}/><Route path="/admin/users" element={<A><AdminUsers/></A>}/><Route path="/admin/categories" element={<A><AdminCategories/></A>}/><Route path="/admin/documents" element={<A><AdminDocuments/></A>}/><Route path="/access-denied" element={<AccessDenied/>}/><Route path="*" element={<NotFound/>}/></Routes></BrowserRouter>}
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Upload from './pages/Upload';
+import Saved from './pages/Saved';
+import Profile from './pages/Profile';
+import Categories from './pages/Categories';
+import DocumentDetail from './pages/DocumentDetail';
+import EditDocument from './pages/EditDocument';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminApproval from './pages/AdminApproval';
+import AdminUsers from './pages/AdminUsers';
+import AdminCategories from './pages/AdminCategories';
+import AdminDocuments from './pages/AdminDocuments';
+import AccessDenied from './pages/AccessDenied';
+import NotFound from './pages/NotFound';
+
+const Private = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>;
+const Admin = ({ children }) => <ProtectedRoute admin>{children}</ProtectedRoute>;
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <div className="app-shell">
+        <Navbar />
+        <div className="app-content">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/documents/:id" element={<DocumentDetail />} />
+            <Route path="/saved" element={<Private><Saved /></Private>} />
+            <Route path="/upload" element={<Private><Upload /></Private>} />
+            <Route path="/profile" element={<Private><Profile /></Private>} />
+            <Route path="/document/edit/:id" element={<Private><EditDocument /></Private>} />
+            <Route path="/admin/dashboard" element={<Admin><AdminDashboard /></Admin>} />
+            <Route path="/admin/approval" element={<Admin><AdminApproval /></Admin>} />
+            <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
+            <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
+            <Route path="/admin/documents" element={<Admin><AdminDocuments /></Admin>} />
+            <Route path="/access-denied" element={<AccessDenied />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+        <Footer />
+      </div>
+    </BrowserRouter>
+  );
+}
