@@ -1,131 +1,54 @@
 import { useState, useEffect } from 'react';
-import { uploadDocument } from '../services/documentService';
-import { getAllCategories } from '../services/categoryService';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const Upload = () => {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [categoryId, setCategoryId] = useState('');
-    const [file, setFile] = useState(null);
     const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({ title: '', description: '', category_id: '' });
+    const [file, setFile] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const data = await getAllCategories();
-                setCategories(data);
-            } catch (error) {
-                console.error("Lỗi khi tải danh mục:", error);
-            }
-        };
-        fetchCategories();
+        api.get('/categories').then(res => {
+            setCategories(res.data);
+            if(res.data.length > 0) setFormData(f => ({...f, category_id: res.data[0].id}));
+        }).catch(e => console.error(e));
     }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!file) return alert('Vui lòng chọn file');
-        
-        if (file.size > 10 * 1024 * 1024) {
-            alert('File quá lớn! Vui lòng chọn file dưới 10MB.');
-            return;
-        }
+        if(!file) return alert('Vui lòng chọn file!');
+        const data = new FormData();
+        data.append('title', formData.title);
+        data.append('description', formData.description);
+        data.append('category_id', formData.category_id);
+        data.append('file', file);
 
-        const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip'];
-        const fileExtension = file.name.split('.').pop().toLowerCase();
-        if (!allowedExtensions.includes(fileExtension)) {
-            alert('Chỉ hỗ trợ file PDF, Word, Excel hoặc Zip!');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('category_id', categoryId);
-        formData.append('file', file);
-
-        setLoading(true);
         try {
-            await uploadDocument(formData);
-            alert('Tải lên thành công! Đang chờ admin duyệt.');
+            await api.post('/documents/upload', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+            alert('Tải lên thành công! Đang chờ duyệt.');
             navigate('/profile');
-        } catch (error) {
-            alert('Lỗi tải lên: ' + (error.response?.data?.message || 'Lỗi hệ thống'));
-        } finally {
-            setLoading(false);
+        } catch (err) { 
+            console.error('Lỗi tải', err);
+            alert('Lỗi tải lên.'); 
         }
     };
 
     return (
-        <div className="fade-in-up" style={{ maxWidth: '600px', margin: '60px auto', padding: '0 24px' }}>
-            <div className="card-modern">
-                <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '8px' }}>Tải lên Tài liệu</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Chia sẻ tài liệu của bạn với cộng đồng.</p>
-                
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Tiêu đề tài liệu</label>
-                        <input 
-                            type="text" 
-                            className="input-modern"
-                            placeholder="Nhập tên tài liệu rõ ràng..."
-                            value={title} 
-                            onChange={(e) => setTitle(e.target.value)} 
-                            required 
-                        />
-                    </div>
-                    
-                    <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Danh mục</label>
-                        <select 
-                            className="input-modern"
-                            value={categoryId} 
-                            onChange={(e) => setCategoryId(e.target.value)} 
-                            required
-                            style={{ appearance: 'none' }}
-                        >
-                            <option value="">-- Chọn danh mục --</option>
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Mô tả chi tiết</label>
-                        <textarea 
-                            className="input-modern"
-                            placeholder="Mô tả ngắn gọn về nội dung tài liệu..."
-                            value={description} 
-                            onChange={(e) => setDescription(e.target.value)} 
-                            rows="4"
-                            style={{ resize: 'vertical' }}
-                        />
-                    </div>
-
-                    <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Tệp đính kèm (Tối đa 10MB)</label>
-                        <input 
-                            type="file" 
-                            onChange={(e) => setFile(e.target.files[0])} 
-                            required 
-                            style={{
-                                display: 'block', width: '100%', padding: '12px',
-                                border: '1px dashed var(--border)', borderRadius: '12px',
-                                background: 'rgba(0,0,0,0.02)', cursor: 'pointer'
-                            }}
-                        />
-                    </div>
-
-                    <button type="submit" className="btn-modern btn-primary" disabled={loading} style={{ padding: '16px', marginTop: '10px' }}>
-                        {loading ? 'Đang tải lên và xử lý...' : 'Xác nhận tải lên'}
-                    </button>
+        <div style={{ maxWidth: '600px', margin: '60px auto', padding: '0 24px' }}>
+            <div className="apple-card">
+                <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px' }}>Tải tài liệu lên</h2>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <input type="text" placeholder="Tiêu đề tài liệu" required onChange={e => setFormData({...formData, title: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                    <textarea placeholder="Mô tả nội dung..." rows="4" required onChange={e => setFormData({...formData, description: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', resize: 'none' }} />
+                    <select onChange={e => setFormData({...formData, category_id: e.target.value})} value={formData.category_id} style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <input type="file" required onChange={e => setFile(e.target.files[0])} style={{ padding: '12px', background: '#FAFAFA', borderRadius: '8px' }} />
+                    <button type="submit" className="btn-apple btn-primary" style={{ padding: '14px', justifyContent: 'center' }}>Xác nhận Tải lên</button>
                 </form>
             </div>
         </div>
     );
 };
-
 export default Upload;

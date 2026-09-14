@@ -1,31 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { FaDownload, FaHeartBroken } from 'react-icons/fa';
 import api from '../services/api';
 
 const Saved = () => {
     const [documents, setDocuments] = useState([]);
 
-    const fetchSaved = useCallback(async () => {
-        try {
-            const res = await api.get('/documents/saved/user');
-            setDocuments(res.data);
-        } catch (err) {
-            console.error('Lỗi tải tài liệu lưu:', err);
-        }
-    }, []);
-
     useEffect(() => { 
-        // FIX: Bọc hàm bất đồng bộ
-        const loadData = async () => {
-            await fetchSaved();
+        let isMounted = true;
+        const fetchSaved = async () => {
+            try {
+                const res = await api.get('/documents/saved/user');
+                if (isMounted) setDocuments(res.data);
+            } catch (err) {
+                console.error('Lỗi tải tài liệu lưu:', err);
+            }
         };
-        loadData();
-    }, [fetchSaved]);
+        fetchSaved();
+        return () => { isMounted = false; };
+    }, []);
 
     const handleRemove = async (id) => {
         try {
             await api.post(`/documents/${id}/save`);
-            fetchSaved();
+            const res = await api.get('/documents/saved/user');
+            setDocuments(res.data);
         } catch (err) {
             console.error('Lỗi bỏ lưu:', err);
         }

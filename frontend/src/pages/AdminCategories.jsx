@@ -5,97 +5,70 @@ const AdminCategories = () => {
     const [categories, setCategories] = useState([]);
     const [name, setName] = useState('');
     const [editId, setEditId] = useState(null);
+    const [search, setSearch] = useState('');
 
     const fetchCategories = useCallback(async () => {
         try {
             const data = await getAllCategories();
             setCategories(data);
         } catch (error) {
-            console.error('Lỗi tải danh mục:', error);
+            console.error('Lỗi tải danh mục', error);
         }
     }, []);
 
-    useEffect(() => {
-        const loadData = async () => {
-            await fetchCategories();
-        };
+    useEffect(() => { 
+        const loadData = async () => { await fetchCategories(); };
         loadData();
     }, [fetchCategories]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            if (editId) {
-                await updateCategory(editId, name);
-            } else {
-                await createCategory(name);
-            }
-            setName('');
-            setEditId(null);
-            fetchCategories();
+            editId ? await updateCategory(editId, name) : await createCategory(name);
+            setName(''); setEditId(null); fetchCategories();
         } catch (error) {
-            console.error('Lỗi lưu danh mục:', error);
+            console.error('Lỗi lưu danh mục', error);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Bạn có chắc muốn xóa danh mục này?')) return;
-        try {
-            await deleteCategory(id);
-            fetchCategories();
-        } catch (error) {
-            console.error('Lỗi xóa danh mục:', error);
-            alert('Không thể xóa danh mục đang chứa tài liệu');
+        if(window.confirm('Xóa danh mục này?')) {
+            try {
+                await deleteCategory(id); 
+                fetchCategories();
+            } catch (error) {
+                console.error('Lỗi xóa', error);
+            }
         }
     };
 
+    const filteredCats = categories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
     return (
-        <div className="fade-in-up" style={{ maxWidth: '800px', margin: '60px auto', padding: '0 24px' }}>
-            <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '24px' }}>Quản lý Danh mục</h2>
+        <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 24px' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '24px' }}>Quản lý Danh mục</h2>
             
-            <div className="card-modern" style={{ marginBottom: '30px', padding: '24px' }}>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <input 
-                        type="text" 
-                        className="input-modern"
-                        value={name} 
-                        onChange={(e) => setName(e.target.value)} 
-                        placeholder="Tên danh mục mới..." 
-                        required 
-                        style={{ flex: 1 }}
-                    />
-                    <button type="submit" className="btn-modern btn-primary">
-                        {editId ? 'Cập nhật' : 'Thêm mới'}
-                    </button>
-                    {editId && (
-                        <button type="button" onClick={() => { setEditId(null); setName(''); }} className="btn-modern btn-secondary">
-                            Hủy
-                        </button>
-                    )}
+            <div className="apple-card" style={{ marginBottom: '24px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '12px' }}>
+                    <input type="text" placeholder="Tên danh mục..." value={name} onChange={e => setName(e.target.value)} required
+                           style={{ flex: 1, padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                    <button type="submit" className="btn-apple btn-primary">{editId ? 'Cập nhật' : 'Thêm mới'}</button>
                 </form>
             </div>
 
-            <div className="card-modern" style={{ padding: '0', overflowX: 'auto' }}>
-                <table className="table-modern">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tên danh mục</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
+            <input type="text" placeholder="Lọc danh mục..." value={search} onChange={e => setSearch(e.target.value)}
+                   style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '16px', width: '300px' }} />
+
+            <div className="apple-card" style={{ padding: 0, overflow: 'hidden' }}>
+                <table>
+                    <thead><tr><th>ID</th><th>Tên danh mục</th><th>Hành động</th></tr></thead>
                     <tbody>
-                        {categories.map(cat => (
+                        {filteredCats.map(cat => (
                             <tr key={cat.id}>
-                                <td>{cat.id}</td>
-                                <td style={{ fontWeight: '500' }}>{cat.name}</td>
-                                <td style={{ display: 'flex', gap: '10px' }}>
-                                    <button onClick={() => { setEditId(cat.id); setName(cat.name); }} className="btn-modern btn-secondary" style={{ padding: '6px 16px', fontSize: '13px', color: 'var(--accent)' }}>
-                                        Sửa
-                                    </button>
-                                    <button onClick={() => handleDelete(cat.id)} className="btn-modern btn-secondary" style={{ padding: '6px 16px', fontSize: '13px', color: 'var(--danger)' }}>
-                                        Xóa
-                                    </button>
+                                <td>{cat.id}</td><td>{cat.name}</td>
+                                <td style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={() => {setEditId(cat.id); setName(cat.name)}} className="btn-apple btn-secondary">Sửa</button>
+                                    <button onClick={() => handleDelete(cat.id)} className="btn-apple" style={{ background: '#FFEBEB', color: '#FF3B30' }}>Xóa</button>
                                 </td>
                             </tr>
                         ))}
@@ -105,5 +78,4 @@ const AdminCategories = () => {
         </div>
     );
 };
-
 export default AdminCategories;
