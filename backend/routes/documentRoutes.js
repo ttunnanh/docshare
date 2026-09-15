@@ -1,20 +1,22 @@
-const r = require('express').Router();
-const c = require('../controllers/documentController');
+const router = require('express').Router();
+const controller = require('../controllers/documentController');
 const publicController = require('../controllers/publicController');
+const secureDownloadController = require('../controllers/secureDownloadController');
 const { verifyToken, verifyRole, optionalToken } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
-r.get('/', c.getAllDocuments);
-r.get('/stats/public', publicController.getStats);
-r.post('/upload', verifyToken, upload.single('file'), c.uploadDocument);
-r.get('/saved/user', verifyToken, c.getSavedDocuments);
-r.get('/admin/all', verifyToken, verifyRole(['admin']), c.getAllForAdmin);
-r.get('/pending', verifyToken, verifyRole(['admin']), c.getPendingDocuments);
-r.post('/:id/save', verifyToken, c.toggleSaveDocument);
-r.get('/:id/download', verifyToken, c.downloadDocument);
-r.put('/:id/approve', verifyToken, verifyRole(['admin']), c.approveDocument);
-r.get('/:id', optionalToken, publicController.getDocumentById);
-r.put('/:id', verifyToken, c.updateDocument);
-r.delete('/:id', verifyToken, c.deleteDocument);
+router.get('/', controller.getAllDocuments);
+router.get('/stats/public', publicController.getStats);
+router.post('/upload', verifyToken, upload.single('file'), controller.uploadDocument);
+router.get('/saved/user', verifyToken, controller.getSavedDocuments);
+router.get('/admin/all', verifyToken, verifyRole(['admin']), controller.getAllForAdmin);
+router.get('/pending', verifyToken, verifyRole(['admin']), controller.getPendingDocuments);
+router.post('/:id/save', verifyToken, controller.toggleSaveDocument);
+router.get('/:id/stream', verifyToken, secureDownloadController.streamDocument);
+router.get('/:id/download', verifyToken, controller.downloadDocument);
+router.put('/:id/approve', verifyToken, verifyRole(['admin']), controller.approveDocument);
+router.get('/:id', optionalToken, publicController.getDocumentById);
+router.put('/:id', verifyToken, controller.updateDocument);
+router.delete('/:id', verifyToken, controller.deleteDocument);
 
-module.exports = r;
+module.exports = router;
