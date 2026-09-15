@@ -30,7 +30,7 @@ exports.getDocumentById = async (req, res) => {
       `SELECT
          d.id, d.title, d.description, d.file_type, d.file_format,
          d.category_id, d.uploader_id, d.status, d.created_at,
-         d.downloads, d.rating,
+         d.downloads, d.rating, d.rejection_reason, d.reviewed_at,
          u.fullname AS uploader_name,
          c.name AS category_name
        FROM documents d
@@ -50,6 +50,11 @@ exports.getDocumentById = async (req, res) => {
 
     if (document.status !== 'approved' && !canViewPrivate) {
       return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+    }
+
+    if (!canViewPrivate) {
+      delete document.rejection_reason;
+      delete document.reviewed_at;
     }
 
     res.json(document);
