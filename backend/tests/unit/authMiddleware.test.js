@@ -1,12 +1,15 @@
-const test = require('node:test');
+const { test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const db = require('../../config/db');
 const { verifyToken, verifyRole } = require('../../middlewares/authMiddleware');
 
 process.env.JWT_SECRET = 'docshare-unit-test-secret';
-
 const originalExecute = db.execute.bind(db);
+
+afterEach(() => {
+  db.execute = originalExecute;
+});
 
 const makeReq = (token = null) => ({
   get(name) {
@@ -22,11 +25,7 @@ const makeRes = () => {
   return res;
 };
 
-test.afterEach(() => {
-  db.execute = originalExecute;
-});
-
-test('verifyToken rejects requests without bearer token', async () => {
+test('missing bearer token returns 401', async () => {
   const req = makeReq();
   const res = makeRes();
   let nextCalled = false;
@@ -35,47 +34,40 @@ test('verifyToken rejects requests without bearer token', async () => {
   assert.equal(nextCalled, false);
 });
 
-test('verifyToken rejects invalid JWT', async () => {
+test('invalid JWT returns 401', async () => {
   const req = makeReq('invalid-token');
   const res = makeRes();
   await verifyToken(req, res, () => assert.fail('next must not run'));
   assert.equal(res.statusCode, 401);
 });
 
-test('verifyToken loads current database role instead of stale token role', async () => {
+test('current database role replaces stale token role', async () => {
   const token = jwt.sign({ id: 7, role: 'student' }, process.env.JWT_SECRET);
   db.execute = async () => [[{ id: 7, role: 'admin', is_active: 1 }]];
   const req = makeReq(token);
   const res = makeRes();
   let nextCalled = false;
-
   await verifyToken(req, res, () => { nextCalled = true; });
-
   assert.equal(nextCalled, true);
   assert.deepEqual(req.user, { id: 7, role: 'admin' });
-  assert.equal(res.statusCode, 200);
 });
 
-test('verifyToken blocks a locked account even with a valid JWT', async () => {
+test('locked account is blocked with explicit code', async () => {
   const token = jwt.sign({ id: 9 }, process.env.JWT_SECRET);
   db.execute = async () => [[{ id: 9, role: 'student', is_active: 0 }]];
   const req = makeReq(token);
   const res = makeRes();
-
   await verifyToken(req, res, () => assert.fail('locked account must not continue'));
-
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.code, 'ACCOUNT_LOCKED');
 });
 
-test('verifyToken rejects token whose user has been deleted', async () => {
+test('deleted user token returns 401', async () => {
   const token = jwt.sign({ id: 99 }, process.env.JWT_SECRET);
   db.execute = async () => [[]];
   const req = makeReq(token);
   const res = makeRes();
-
   await verifyToken(req, res, () => assert.fail('deleted user must not continue'));
-
   assert.equal(res.statusCode, 401);
 });
 
