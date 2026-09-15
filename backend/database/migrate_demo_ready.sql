@@ -1,7 +1,9 @@
 USE hoc_lieu_so_db;
 
+-- Keep the base migration idempotent with the enterprise workflow so re-running
+-- `npm run migrate` never removes the `draft` status from existing rows.
 ALTER TABLE documents
-  MODIFY status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending';
+  MODIFY status ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'pending';
 
 ALTER TABLE documents
   ADD COLUMN IF NOT EXISTS downloads INT NOT NULL DEFAULT 0,
