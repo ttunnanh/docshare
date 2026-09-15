@@ -16,6 +16,7 @@ import AdminApproval from './pages/AdminApproval';
 import AdminUsers from './pages/AdminUsers';
 import AdminCategories from './pages/AdminCategories';
 import AdminDocuments from './pages/AdminDocuments';
+import AdminAuditLogs from './pages/AdminAuditLogs';
 import AccessDenied from './pages/AccessDenied';
 import NotFound from './pages/NotFound';
 
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
             <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
             <Route path="/admin/documents" element={<Admin><AdminDocuments /></Admin>} />
+            <Route path="/admin/audit-logs" element={<Admin><AdminAuditLogs /></Admin>} />
             <Route path="/access-denied" element={<AccessDenied />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
