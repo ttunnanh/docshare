@@ -3,7 +3,7 @@ const spec = {
   info: {
     title: 'DocShare API',
     version: '1.1.0',
-    description: 'REST API cho hệ thống quản lý và chia sẻ học liệu số DocShare.',
+    description: 'REST API cho hệ thống quản lý và chia sẻ học liệu số DocShare với RBAC, kiểm duyệt, Audit Logs và Stream Guard.',
   },
   servers: [{ url: 'http://localhost:5000/api', description: 'Local development' }],
   components: {
@@ -23,6 +23,16 @@ const spec = {
           fullname: { type: 'string', minLength: 2 },
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 6 },
+        },
+      },
+      DocumentUpdate: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          title: { type: 'string', minLength: 3 },
+          description: { type: 'string' },
+          category_id: { type: 'integer', nullable: true },
+          submission_mode: { type: 'string', enum: ['draft', 'submit'], default: 'submit' },
         },
       },
     },
@@ -62,18 +72,57 @@ const spec = {
     },
     '/documents/upload': {
       post: {
-        summary: 'Tải học liệu lên và gửi chờ duyệt',
+        summary: 'Tải học liệu lên',
+        description: 'submission_mode=draft để lưu nháp; submit để đưa vào hàng đợi kiểm duyệt.',
         security: [{ bearerAuth: [] }],
-        requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, category_id: { type: 'integer' }, file: { type: 'string', format: 'binary' } }, required: ['title', 'file'] } } } },
-        responses: { 201: { description: 'Upload thành công' }, 401: { description: 'Chưa đăng nhập' } },
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', minLength: 3 },
+                  description: { type: 'string' },
+                  category_id: { type: 'integer' },
+                  submission_mode: { type: 'string', enum: ['draft', 'submit'], default: 'submit' },
+                  file: { type: 'string', format: 'binary' },
+                },
+                required: ['title', 'file'],
+              },
+            },
+          },
+        },
+        responses: { 201: { description: 'Lưu nháp hoặc gửi duyệt thành công' }, 401: { description: 'Chưa đăng nhập' } },
       },
     },
-    '/documents/{id}/download': {
+    '/documents/{id}': {
       get: {
-        summary: 'Tải tài liệu và ghi lịch sử',
+        summary: 'Chi tiết học liệu',
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
+        responses: { 200: { description: 'Document metadata' }, 404: { description: 'Không tìm thấy hoặc không có quyền xem' } },
+      },
+      put: {
+        summary: 'Chỉnh sửa tài liệu',
+        description: 'Chủ sở hữu có thể lưu nháp hoặc gửi lại để duyệt. Admin chỉnh metadata mà không đổi trạng thái.',
         security: [{ bearerAuth: [] }],
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
-        responses: { 200: { description: 'Download URL' }, 404: { description: 'Tài liệu không tồn tại/chưa duyệt' } },
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/DocumentUpdate' } } } },
+        responses: { 200: { description: 'Document updated' }, 403: { description: 'Không phải chủ sở hữu/admin' } },
+      },
+    },
+    '/documents/{id}/stream': {
+      get: {
+        summary: 'Tải tài liệu an toàn qua Stream Guard',
+        description: 'Backend xác thực JWT, kiểm tra tài liệu đã duyệt, ghi lịch sử/lượt tải rồi stream file từ kho lưu trữ mà không trả Cloudinary URL cho client.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Binary file stream', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } },
+          401: { description: 'Chưa đăng nhập' },
+          404: { description: 'Tài liệu không tồn tại/chưa duyệt' },
+          502: { description: 'Không đọc được file từ kho lưu trữ' },
+        },
       },
     },
     '/users/profile': {
@@ -82,6 +131,15 @@ const spec = {
     },
     '/admin/stats': {
       get: { summary: 'KPI quản trị', security: [{ bearerAuth: [] }], responses: { 200: { description: 'System KPIs' }, 403: { description: 'Admin only' } } },
+    },
+    '/admin/users/{id}/role': {
+      put: {
+        summary: 'Đổi vai trò RBAC',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { role: { type: 'string', enum: ['student', 'teacher', 'admin'] } }, required: ['role'] } } } },
+        responses: { 200: { description: 'Role updated' }, 403: { description: 'Admin only' } },
+      },
     },
     '/admin/users/{id}/status': {
       patch: {
@@ -98,7 +156,7 @@ const spec = {
         description: 'Khi status=rejected, rejection_reason là bắt buộc.',
         security: [{ bearerAuth: [] }],
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer' } }],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['approved', 'rejected'] }, rejection_reason: { type: 'string', maxLength: 500 } }, required: ['status'] } } } },
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['approved', 'rejected'] }, rejection_reason: { type: 'string', minLength: 3, maxLength: 500 } }, required: ['status'] } } } },
         responses: { 200: { description: 'Moderation updated' }, 400: { description: 'Invalid review input' } },
       },
     },
