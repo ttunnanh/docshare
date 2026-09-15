@@ -11,6 +11,8 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const locked = params.get('reason') === 'locked';
 
   const submit = async (event) => {
     event.preventDefault();
@@ -22,7 +24,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
       window.dispatchEvent(new Event('auth-changed'));
 
-      const fromQuery = new URLSearchParams(location.search).get('from');
+      const fromQuery = params.get('from');
       const requestedPath = location.state?.from || fromQuery;
       navigate(requestedPath || (response.data.user.role === 'admin' ? '/admin/dashboard' : '/'), { replace: true });
     } catch (requestError) {
@@ -42,7 +44,7 @@ export default function Login() {
             <h1>Học tập tốt hơn khi tri thức được chia sẻ.</h1>
             <p>Truy cập học liệu đã kiểm duyệt, lưu tài liệu yêu thích và đóng góp kiến thức cho cộng đồng.</p>
           </div>
-          <div className="auth-trust">Học liệu được kiểm duyệt · Tải xuống nhanh · Quản lý cá nhân</div>
+          <div className="auth-trust">Học liệu được kiểm duyệt · Tải xuống an toàn · Quản lý cá nhân</div>
         </section>
 
         <section className="auth-card">
@@ -52,6 +54,9 @@ export default function Login() {
             <p>Tiếp tục hành trình học tập cùng DocShare.</p>
           </div>
 
+          {locked && !error && (
+            <div className="alert error">Phiên đăng nhập đã kết thúc vì tài khoản này đang bị khóa. Vui lòng liên hệ quản trị viên nếu cần hỗ trợ.</div>
+          )}
           {error && <div className="alert error">{error}</div>}
 
           <form className="form-stack" onSubmit={submit}>
