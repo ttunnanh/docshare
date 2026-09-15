@@ -215,6 +215,31 @@
   line-height: 1.45;
 }
 
+.badge.draft {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
+.upload-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.75rem;
+}
+
+.upload-action-row .btn {
+  width: 100%;
+}
+
+.enterprise-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .enterprise-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .review-modal-actions > * {
     flex: 1 1 auto;
@@ -226,5 +251,10 @@
 
   .audit-pagination span {
     font-size: 0.85rem;
+  }
+
+  .upload-action-row,
+  .enterprise-stat-grid {
+    grid-template-columns: 1fr;
   }
 }
