@@ -6,6 +6,10 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS locked_at DATETIME NULL,
   ADD COLUMN IF NOT EXISTS last_login_at DATETIME NULL;
 
+-- Full document workflow: draft -> pending -> approved/rejected
+ALTER TABLE documents
+  MODIFY status ENUM('draft','pending','approved','rejected') NOT NULL DEFAULT 'pending';
+
 -- Moderation metadata
 ALTER TABLE documents
   ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(500) NULL,
