@@ -59,8 +59,7 @@ export default function DocumentDetail() {
     if (!requireAuth()) return;
     setBusy(true);
     try {
-      const result = await downloadDocument(id);
-      window.open(result.downloadUrl, '_blank', 'noopener,noreferrer');
+      await downloadDocument(id);
       setDocument((current) => ({ ...current, downloads: Number(current.downloads || 0) + 1 }));
     } catch (requestError) {
       alert(requestError.response?.data?.message || 'Không thể tải tài liệu.');
@@ -116,6 +115,13 @@ export default function DocumentDetail() {
             </div>
           </div>
 
+          {document.status === 'rejected' && document.rejection_reason && canEdit && (
+            <div className="rejection-feedback">
+              <strong>Phản hồi kiểm duyệt:</strong> {document.rejection_reason}
+              {document.reviewed_at && <div className="cell-sub">Cập nhật {new Date(document.reviewed_at).toLocaleString('vi-VN')}</div>}
+            </div>
+          )}
+
           <div className="detail-meta">
             <div><span><FiFolder /> Danh mục</span><strong>{document.category_name || 'Chưa phân loại'}</strong></div>
             <div><span><FiUser /> Người đăng</span><strong>{document.uploader_name || 'Người dùng DocShare'}</strong></div>
@@ -126,7 +132,7 @@ export default function DocumentDetail() {
           <div className="document-note">
             <FiBookOpen />
             <div>
-              <strong>Học liệu đã được kiểm duyệt</strong>
+              <strong>{approved ? 'Học liệu đã được kiểm duyệt' : 'Học liệu chưa công khai'}</strong>
               <p>{approved ? 'Tài liệu đã được quản trị viên DocShare phê duyệt trước khi hiển thị công khai.' : 'Tài liệu này hiện chỉ hiển thị cho chủ sở hữu hoặc quản trị viên.'}</p>
             </div>
           </div>
@@ -134,13 +140,13 @@ export default function DocumentDetail() {
 
         <aside className="detail-card detail-actions-card">
           <span className="eyebrow">Thao tác</span>
-          <h3>Sẵn sàng học tập?</h3>
-          <p>{token ? 'Lưu vào thư viện cá nhân hoặc tải tài liệu xuống thiết bị.' : 'Đăng nhập để lưu và tải học liệu xuống thiết bị.'}</p>
+          <h3>{approved ? 'Sẵn sàng học tập?' : 'Quản lý tài liệu'}</h3>
+          <p>{approved ? (token ? 'Lưu vào thư viện cá nhân hoặc tải tài liệu an toàn qua Stream Guard.' : 'Đăng nhập để lưu và tải học liệu xuống thiết bị.') : 'Hoàn thiện nội dung rồi gửi lại để quản trị viên kiểm duyệt.'}</p>
 
           {approved && (
             <>
               <button className="btn primary wide" type="button" disabled={busy} onClick={handleDownload}>
-                <FiDownload /> {busy ? 'Đang xử lý...' : 'Tải tài liệu'}
+                <FiDownload /> {busy ? 'Đang tải...' : 'Tải tài liệu'}
               </button>
               <button className={saved ? 'btn saved-action wide' : 'btn ghost wide'} type="button" onClick={handleSave}>
                 <FiBookmark /> {saved ? 'Đã lưu' : 'Lưu vào thư viện'}

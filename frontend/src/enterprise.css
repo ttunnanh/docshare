@@ -1,0 +1,260 @@
+.enterprise-filterbar {
+  flex-wrap: wrap;
+}
+
+.account-state,
+.audit-action {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.32rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.account-state.active {
+  background: rgba(22, 163, 74, 0.11);
+  color: #15803d;
+}
+
+.account-state.locked {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lock-action,
+.unlock-action,
+.audit-refresh,
+.audit-pagination button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lock-action,
+.unlock-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  font-weight: 700;
+}
+
+.lock-action {
+  color: #b45309;
+}
+
+.unlock-action {
+  color: #15803d;
+}
+
+.lock-action:disabled,
+.unlock-action:disabled,
+.audit-refresh:disabled,
+.audit-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(5px);
+}
+
+.review-modal {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+.review-modal h2 {
+  margin: 0.25rem 0 0.35rem;
+}
+
+.review-modal p {
+  margin: 0;
+}
+
+.review-modal-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  font-size: 1.25rem;
+}
+
+.review-textarea {
+  width: 100%;
+  margin-top: 0.5rem;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.review-counter {
+  margin-top: -0.65rem;
+  color: var(--muted, #64748b);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.review-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn.danger {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #b91c1c;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.audit-filterbar form.admin-search {
+  flex: 1 1 320px;
+}
+
+.audit-refresh {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.audit-table-wrap table {
+  min-width: 1080px;
+}
+
+.audit-action.auth {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+}
+
+.audit-action.admin {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+}
+
+.audit-action.document {
+  background: rgba(5, 150, 105, 0.1);
+  color: #047857;
+}
+
+.audit-action.other {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
+.audit-time,
+.audit-ip {
+  white-space: nowrap;
+}
+
+.audit-details {
+  max-width: 360px;
+  min-width: 220px;
+  color: var(--muted, #64748b);
+  line-height: 1.45;
+}
+
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.audit-pagination button {
+  padding: 0.58rem 0.9rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  color: var(--text, #0f172a);
+  font-weight: 700;
+}
+
+.rejection-feedback {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #991b1b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.badge.draft {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+}
+
+.upload-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.75rem;
+}
+
+.upload-action-row .btn {
+  width: 100%;
+}
+
+.enterprise-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .enterprise-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .review-modal-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .audit-pagination {
+    justify-content: space-between;
+  }
+
+  .audit-pagination span {
+    font-size: 0.85rem;
+  }
+
+  .upload-action-row,
+  .enterprise-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}

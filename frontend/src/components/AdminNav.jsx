@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FiBookOpen, FiCheckCircle, FiFolder, FiGrid, FiUsers } from 'react-icons/fi';
+import { FiActivity, FiBookOpen, FiCheckCircle, FiFolder, FiGrid, FiUsers } from 'react-icons/fi';
 
 const items = [
   ['/admin/dashboard', FiGrid, 'Tổng quan'],
@@ -7,6 +7,7 @@ const items = [
   ['/admin/documents', FiBookOpen, 'Tài liệu'],
   ['/admin/categories', FiFolder, 'Danh mục'],
   ['/admin/users', FiUsers, 'Người dùng'],
+  ['/admin/audit-logs', FiActivity, 'Nhật ký'],
 ];
 
 export default function AdminNav() {

@@ -143,7 +143,13 @@ export default function Profile() {
             <tbody>
               {uploads.map((document) => (
                 <tr key={document.id}>
-                  <td><Link to={`/documents/${document.id}`}>{document.title}</Link><div className="cell-sub">{document.file_format || 'FILE'}</div></td>
+                  <td>
+                    <Link to={`/documents/${document.id}`}>{document.title}</Link>
+                    <div className="cell-sub">{document.file_format || 'FILE'}</div>
+                    {document.status === 'rejected' && document.rejection_reason && (
+                      <div className="rejection-feedback"><strong>Lý do từ chối:</strong> {document.rejection_reason}</div>
+                    )}
+                  </td>
                   <td>{document.category_name || '—'}</td>
                   <td><span className={`badge ${document.status}`}>{document.status}</span></td>
                   <td>{Number(document.downloads || 0).toLocaleString('vi-VN')}</td>

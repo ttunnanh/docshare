@@ -33,8 +33,7 @@ export default function Saved() {
 
   const handleDownload = async (id) => {
     try {
-      const result = await downloadDocument(id);
-      window.open(result.downloadUrl, '_blank', 'noopener,noreferrer');
+      await downloadDocument(id);
       setDocuments((items) => items.map((item) => item.id === id
         ? { ...item, downloads: Number(item.downloads || 0) + 1 }
         : item));

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheckCircle, FiFileText, FiUploadCloud, FiX } from 'react-icons/fi';
+import { FiCheckCircle, FiFileText, FiSave, FiUploadCloud, FiX } from 'react-icons/fi';
 import { getCategories } from '../services/categoryService';
 import { uploadDocument } from '../services/documentService';
 
@@ -17,7 +17,7 @@ export default function Upload() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ title: '', description: '', category_id: '' });
   const [file, setFile] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busyMode, setBusyMode] = useState('');
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
@@ -49,40 +49,43 @@ export default function Upload() {
     setFile(selected);
   };
 
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!file) return setError('Hãy chọn file tài liệu trước khi gửi.');
+  const submit = async (event, mode = 'submit') => {
+    event?.preventDefault();
+    if (!file) return setError('Hãy chọn file tài liệu trước khi lưu.');
     if (form.title.trim().length < 3) return setError('Tiêu đề tối thiểu 3 ký tự.');
 
-    setBusy(true);
+    setBusyMode(mode);
     setError('');
     const payload = new FormData();
     payload.append('title', form.title.trim());
     payload.append('description', form.description.trim());
     payload.append('category_id', form.category_id);
+    payload.append('submission_mode', mode === 'draft' ? 'draft' : 'submit');
     payload.append('file', file);
 
     try {
       const result = await uploadDocument(payload);
-      alert(result.message || 'Tải tài liệu lên thành công.');
+      alert(result.message || (mode === 'draft' ? 'Đã lưu bản nháp.' : 'Đã gửi tài liệu chờ duyệt.'));
       navigate('/profile');
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Không thể tải tài liệu lên.');
+      setError(requestError.response?.data?.message || 'Không thể lưu tài liệu.');
     } finally {
-      setBusy(false);
+      setBusyMode('');
     }
   };
+
+  const busy = Boolean(busyMode);
 
   return (
     <main className="section shell upload-shell">
       <div className="page-title">
         <span className="eyebrow">Đóng góp cho cộng đồng</span>
         <h1>Đăng tài liệu mới</h1>
-        <p>Chia sẻ học liệu hữu ích. Tất cả tài liệu sẽ được quản trị viên kiểm duyệt trước khi công khai.</p>
+        <p>Lưu bản nháp để hoàn thiện sau hoặc gửi ngay vào hàng đợi kiểm duyệt trước khi công khai.</p>
       </div>
 
       <div className="upload-layout">
-        <form className="panel form-stack upload-form" onSubmit={submit}>
+        <form className="panel form-stack upload-form" onSubmit={(event) => submit(event, 'submit')}>
           {error && <div className="alert error">{error}</div>}
 
           <div className="field-grid two">
@@ -163,9 +166,19 @@ export default function Upload() {
             </div>
           )}
 
-          <button disabled={busy || !file || !categories.length} className="btn primary wide upload-submit" type="submit">
-            <FiUploadCloud /> {busy ? 'Đang tải lên...' : 'Gửi tài liệu chờ duyệt'}
-          </button>
+          <div className="upload-action-row">
+            <button
+              disabled={busy || !file || !categories.length}
+              className="btn ghost"
+              type="button"
+              onClick={() => submit(null, 'draft')}
+            >
+              <FiSave /> {busyMode === 'draft' ? 'Đang lưu nháp...' : 'Lưu bản nháp'}
+            </button>
+            <button disabled={busy || !file || !categories.length} className="btn primary" type="submit">
+              <FiUploadCloud /> {busyMode === 'submit' ? 'Đang gửi...' : 'Gửi chờ duyệt'}
+            </button>
+          </div>
         </form>
 
         <aside className="panel upload-guide">
@@ -174,6 +187,7 @@ export default function Upload() {
           <div className="guide-item"><FiCheckCircle /><div><strong>Tiêu đề dễ hiểu</strong><p>Ghi rõ môn học hoặc chủ đề chính.</p></div></div>
           <div className="guide-item"><FiCheckCircle /><div><strong>Mô tả đủ thông tin</strong><p>Nêu nội dung và đối tượng phù hợp.</p></div></div>
           <div className="guide-item"><FiCheckCircle /><div><strong>File đúng định dạng</strong><p>Kiểm tra file mở được trước khi tải lên.</p></div></div>
+          <div className="guide-item"><FiCheckCircle /><div><strong>Quy trình rõ ràng</strong><p>Bản nháp chỉ bạn và admin nhìn thấy; gửi duyệt khi nội dung đã sẵn sàng.</p></div></div>
           <div className="guide-item"><FiCheckCircle /><div><strong>Tôn trọng bản quyền</strong><p>Chỉ chia sẻ tài liệu bạn có quyền sử dụng.</p></div></div>
         </aside>
       </div>
