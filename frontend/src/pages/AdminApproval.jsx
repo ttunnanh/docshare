@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiCheck, FiClock, FiEye, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiEye, FiMessageSquare, FiX } from 'react-icons/fi';
 import AdminNav from '../components/AdminNav';
 import { getPendingDocuments, setDocumentStatus } from '../services/adminService';
 
@@ -10,13 +10,15 @@ export default function AdminApproval() {
   const [workingId, setWorkingId] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [rejecting, setRejecting] = useState(null);
+  const [reason, setReason] = useState('');
 
   const load = async () => {
     try {
       setError('');
       setDocuments(await getPendingDocuments());
-    } catch {
-      setError('Không thể tải hàng đợi kiểm duyệt.');
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Không thể tải hàng đợi kiểm duyệt.');
     } finally {
       setLoading(false);
     }
@@ -24,19 +26,47 @@ export default function AdminApproval() {
 
   useEffect(() => { load(); }, []);
 
-  const act = async (id, status) => {
-    const approved = status === 'approved';
-    if (!window.confirm(approved ? 'Duyệt tài liệu này và hiển thị công khai?' : 'Từ chối tài liệu này?')) return;
-
-    setWorkingId(id);
+  const approve = async (document) => {
+    if (!window.confirm(`Duyệt "${document.title}" và hiển thị công khai?`)) return;
+    setWorkingId(document.id);
     setError('');
     setNotice('');
     try {
-      const result = await setDocumentStatus(id, status);
-      setDocuments((items) => items.filter((item) => item.id !== id));
-      setNotice(result.message || (approved ? 'Đã duyệt tài liệu.' : 'Đã từ chối tài liệu.'));
+      const result = await setDocumentStatus(document.id, 'approved');
+      setDocuments((items) => items.filter((item) => item.id !== document.id));
+      setNotice(result.message || 'Đã duyệt tài liệu.');
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Không thể cập nhật trạng thái tài liệu.');
+      setError(requestError.response?.data?.message || 'Không thể duyệt tài liệu.');
+    } finally {
+      setWorkingId(null);
+    }
+  };
+
+  const openReject = (document) => {
+    setRejecting(document);
+    setReason('');
+    setError('');
+    setNotice('');
+  };
+
+  const reject = async (event) => {
+    event.preventDefault();
+    const cleanReason = reason.trim();
+    if (cleanReason.length < 3) {
+      setError('Lý do từ chối cần tối thiểu 3 ký tự.');
+      return;
+    }
+
+    setWorkingId(rejecting.id);
+    setError('');
+    try {
+      const result = await setDocumentStatus(rejecting.id, 'rejected', cleanReason);
+      setDocuments((items) => items.filter((item) => item.id !== rejecting.id));
+      setNotice(result.message || 'Đã từ chối tài liệu và lưu lý do.');
+      setRejecting(null);
+      setReason('');
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'Không thể từ chối tài liệu.');
     } finally {
       setWorkingId(null);
     }
@@ -49,7 +79,7 @@ export default function AdminApproval() {
         <div>
           <span className="eyebrow">Kiểm duyệt học liệu</span>
           <h1>Tài liệu chờ duyệt</h1>
-          <p>Kiểm tra nội dung và metadata trước khi đưa tài liệu lên thư viện công khai.</p>
+          <p>Kiểm tra nội dung và metadata. Tài liệu bị từ chối bắt buộc có phản hồi để người đăng biết cách chỉnh sửa.</p>
         </div>
         <div className="queue-pill"><FiClock /> {documents.length} đang chờ</div>
       </div>
@@ -75,14 +105,47 @@ export default function AdminApproval() {
                   <td>
                     <div className="row-actions admin-row-actions">
                       <Link to={`/documents/${document.id}`}><FiEye /> Xem</Link>
-                      <button className="approve" disabled={workingId === document.id} onClick={() => act(document.id, 'approved')}><FiCheck /> Duyệt</button>
-                      <button className="reject" disabled={workingId === document.id} onClick={() => act(document.id, 'rejected')}><FiX /> Từ chối</button>
+                      <button className="approve" disabled={workingId === document.id} onClick={() => approve(document)}><FiCheck /> Duyệt</button>
+                      <button className="reject" disabled={workingId === document.id} onClick={() => openReject(document)}><FiX /> Từ chối</button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {rejecting && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !workingId) setRejecting(null);
+        }}>
+          <form className="review-modal panel" onSubmit={reject}>
+            <div className="review-modal-icon"><FiMessageSquare /></div>
+            <div>
+              <span className="eyebrow">Phản hồi kiểm duyệt</span>
+              <h2>Từ chối tài liệu</h2>
+              <p><strong>{rejecting.title}</strong></p>
+            </div>
+            <label>
+              Lý do từ chối
+              <textarea
+                className="input review-textarea"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                maxLength={500}
+                rows={5}
+                autoFocus
+                placeholder="Ví dụ: Nội dung chưa đúng danh mục, thiếu mô tả hoặc file chưa hoàn chỉnh..."
+                required
+              />
+            </label>
+            <div className="review-counter">{reason.length}/500 ký tự</div>
+            <div className="review-modal-actions">
+              <button className="btn ghost" type="button" disabled={Boolean(workingId)} onClick={() => setRejecting(null)}>Hủy</button>
+              <button className="btn danger" type="submit" disabled={Boolean(workingId) || reason.trim().length < 3}><FiX /> Xác nhận từ chối</button>
+            </div>
+          </form>
         </div>
       )}
     </main>
