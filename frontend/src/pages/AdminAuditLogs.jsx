@@ -12,15 +12,18 @@ const actionLabels = {
   'admin.user_locked': 'Khóa tài khoản',
   'admin.user_unlocked': 'Mở khóa tài khoản',
   'admin.user_deleted': 'Xóa tài khoản',
-  'document.uploaded': 'Đăng tài liệu',
-  'document.updated': 'Sửa tài liệu',
+  'document.draft_created': 'Tạo bản nháp',
+  'document.draft_saved': 'Lưu bản nháp',
+  'document.uploaded': 'Gửi tài liệu duyệt',
+  'document.updated': 'Sửa / gửi lại tài liệu',
   'document.approved': 'Duyệt tài liệu',
   'document.rejected': 'Từ chối tài liệu',
-  'document.downloaded': 'Tải tài liệu',
+  'document.downloaded': 'Tải tài liệu (legacy)',
+  'document.stream_downloaded': 'Tải qua Stream Guard',
   'document.deleted': 'Xóa tài liệu',
 };
 
-const actionGroup = (action) => {
+const actionGroup = (action = '') => {
   if (action.startsWith('auth.')) return 'auth';
   if (action.startsWith('admin.')) return 'admin';
   if (action.startsWith('document.')) return 'document';
