@@ -4,6 +4,8 @@ const { writeAudit } = require('../utils/audit');
 const { positiveInt } = require('../utils/validation');
 const { validateReviewInput } = require('../utils/documentWorkflow');
 
+const requestedSubmissionStatus = (value) => String(value || '').trim() === 'draft' ? 'draft' : 'pending';
+
 exports.getAllDocuments = async (req, res) => {
   try {
     const keyword = String(req.query.keyword || '').trim();
@@ -54,6 +56,7 @@ exports.uploadDocument = async (req, res) => {
     const description = String(req.body.description || '').trim();
     const category = req.body.category_id || null;
     const file = req.file;
+    const status = requestedSubmissionStatus(req.body.submission_mode);
 
     if (title.length < 3) return res.status(400).json({ message: 'Tiêu đề tối thiểu 3 ký tự.' });
     if (!file) return res.status(400).json({ message: 'Vui lòng chọn file.' });
@@ -72,22 +75,25 @@ exports.uploadDocument = async (req, res) => {
             `INSERT INTO documents(
                title, description, file_url, cloudinary_public_id, category_id,
                uploader_id, status, file_format, downloads, rejection_reason, reviewed_by, reviewed_at
-             ) VALUES(?,?,?,?,?,?,'pending',?,0,NULL,NULL,NULL)`,
-            [title, description || null, result.secure_url, result.public_id, category, req.user.id, format]
+             ) VALUES(?,?,?,?,?,?,?,?,0,NULL,NULL,NULL)`,
+            [title, description || null, result.secure_url, result.public_id, category, req.user.id, status, format]
           );
 
           await writeAudit({
             req,
             userId: req.user.id,
-            action: 'document.uploaded',
+            action: status === 'draft' ? 'document.draft_created' : 'document.uploaded',
             entityType: 'document',
             entityId: insert.insertId,
-            details: { title, format, category_id: category },
+            details: { title, format, category_id: category, status },
           });
 
           res.status(201).json({
-            message: 'Tải lên thành công, đang chờ duyệt.',
+            message: status === 'draft'
+              ? 'Đã lưu bản nháp. Bạn có thể chỉnh sửa và gửi duyệt sau.'
+              : 'Tải lên thành công, đang chờ duyệt.',
             documentId: insert.insertId,
+            status,
           });
         } catch (dbError) {
           console.error(dbError);
@@ -233,34 +239,39 @@ exports.updateDocument = async (req, res) => {
       return res.status(403).json({ message: 'Bạn không có quyền sửa tài liệu này.' });
     }
 
+    let nextStatus = rows[0].status;
     if (req.user.role === 'admin') {
       await db.execute(
         'UPDATE documents SET title = ?, description = ?, category_id = ? WHERE id = ?',
         [title, description || null, category, req.params.id]
       );
     } else {
+      nextStatus = requestedSubmissionStatus(req.body.submission_mode);
       await db.execute(
         `UPDATE documents
-         SET title = ?, description = ?, category_id = ?, status = 'pending',
+         SET title = ?, description = ?, category_id = ?, status = ?,
              rejection_reason = NULL, reviewed_by = NULL, reviewed_at = NULL
          WHERE id = ?`,
-        [title, description || null, category, req.params.id]
+        [title, description || null, category, nextStatus, req.params.id]
       );
     }
 
     await writeAudit({
       req,
       userId: req.user.id,
-      action: 'document.updated',
+      action: nextStatus === 'draft' ? 'document.draft_saved' : 'document.updated',
       entityType: 'document',
       entityId: req.params.id,
-      details: { title, previous_status: rows[0].status, requires_review: req.user.role !== 'admin' },
+      details: { title, previous_status: rows[0].status, next_status: nextStatus },
     });
 
     res.json({
       message: req.user.role === 'admin'
         ? 'Cập nhật thành công.'
-        : 'Cập nhật thành công, tài liệu sẽ được duyệt lại.',
+        : nextStatus === 'draft'
+          ? 'Đã lưu bản nháp. Khi sẵn sàng, hãy gửi tài liệu để kiểm duyệt.'
+          : 'Cập nhật thành công, tài liệu đã được gửi chờ duyệt.',
+      status: nextStatus,
     });
   } catch (error) {
     console.error(error);
@@ -366,3 +377,5 @@ exports.getSavedDocuments = async (req, res) => {
     res.status(500).json({ message: 'Không thể tải tài liệu đã lưu.' });
   }
 };
+
+exports._private = { requestedSubmissionStatus };
