@@ -85,7 +85,7 @@ export default function Home() {
 
   const requireAuth = () => {
     if (token) return true;
-    navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+    navigate('/login', { state: { from: `${window.location.pathname}${window.location.search}` } });
     return false;
   };
 
@@ -106,11 +106,11 @@ export default function Home() {
   const handleDownload = async (id) => {
     if (!requireAuth()) return;
     try {
-      const result = await downloadDocument(id);
-      window.open(result.downloadUrl, '_blank', 'noopener,noreferrer');
+      await downloadDocument(id);
       setDocuments((items) => items.map((item) => (
         item.id === id ? { ...item, downloads: Number(item.downloads || 0) + 1 } : item
       )));
+      setStats((current) => ({ ...current, totalDownloads: Number(current.totalDownloads || 0) + 1 }));
     } catch (requestError) {
       alert(requestError.response?.data?.message || 'Không thể tải tài liệu.');
     }
